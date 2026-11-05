@@ -49,7 +49,10 @@ import org.xml.sax.helpers.DefaultHandler;
  * @noinspectionreason ThisEscapedInObjectConstruction - only reference is used and not
  *      accessed until initialized
  */
-public class XmlLoader
+// Anti-Pattern Refactor: BaseClassShouldBeAbstract resolved by declaring the class abstract.
+// XmlLoader is only used as a base class (4 subclasses) and is never instantiated directly,
+// its constructor was already protected.
+public abstract class XmlLoader
     extends DefaultHandler {
 
     /** Maps public id to resolve to resource name for the DTD. */
