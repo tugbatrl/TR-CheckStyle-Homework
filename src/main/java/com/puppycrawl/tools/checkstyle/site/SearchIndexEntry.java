@@ -24,19 +24,42 @@ import javax.annotation.Nullable;
 /**
  * Represents a single entry in the client-side search index.
  *
- * @param title display name
- * @param url relative URL
- * @param category category label
- * @param type document type
- * @param description short description
- * @param keywords comma-separated keywords
- * @param since the version this module/property was introduced (can be empty)
- * @param weight ranking weight for search results
+ * @param location where the entry points to (title and url)
+ * @param classification category, type and ranking weight
+ * @param content description, keywords and since version
  */
-public record SearchIndexEntry(String title, String url, String category,
-                            String type, String description, String keywords,
-                            String since, int weight) {
+// Code Smell Refactor: 8 parameters grouped into 3 parameter objects
+public record SearchIndexEntry(EntryLocation location,
+                               EntryClassification classification,
+                               EntryContent content) {
+    /**
+     * Where the entry points to.
+     *
+     * @param title display name
+     * @param url relative URL
+     */
+    public record EntryLocation(String title, String url) {
+    }
 
+     /**
+     * How the entry is categorised and ranked.
+     *
+     * @param category category label
+     * @param type document type
+     * @param weight ranking weight for search results
+     */
+    public record EntryClassification(String category, String type, int weight) {
+    }
+
+    /**
+     * The searchable text of the entry.
+     *
+     * @param description short description
+     * @param keywords comma-separated keywords
+     * @param since the version this module/property was introduced (can be empty)
+     */
+    public record EntryContent(String description, String keywords, String since) {
+    }
     /** String literal for comma. */
     private static final String COMMA = ",";
 
@@ -61,15 +84,15 @@ public record SearchIndexEntry(String title, String url, String category,
      * @return JSON object string
      */
     public String toJson() {
-        return "{"
-            + "\"title\":" + jsonString(title) + COMMA
-            + "\"url\":" + jsonString(url) + COMMA
-            + "\"category\":" + jsonString(category) + COMMA
-            + "\"type\":" + jsonString(type) + COMMA
-            + "\"description\":" + jsonString(description) + COMMA
-            + "\"since\":" + jsonString(since) + COMMA
-            + "\"weight\":" + weight + COMMA
-            + "\"keywords\":" + jsonString(keywords)
+         return "{"
+            + "\"title\":" + jsonString(location.title()) + COMMA
+            + "\"url\":" + jsonString(location.url()) + COMMA
+            + "\"category\":" + jsonString(classification.category()) + COMMA
+            + "\"type\":" + jsonString(classification.type()) + COMMA
+            + "\"description\":" + jsonString(content.description()) + COMMA
+            + "\"since\":" + jsonString(content.since()) + COMMA
+            + "\"weight\":" + classification.weight() + COMMA
+            + "\"keywords\":" + jsonString(content.keywords())
             + "}";
     }
 
