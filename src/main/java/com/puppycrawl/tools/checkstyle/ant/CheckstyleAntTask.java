@@ -65,12 +65,6 @@ import com.puppycrawl.tools.checkstyle.api.SeverityLevelCounter;
  */
 public class CheckstyleAntTask extends Task {
 
-    /** Poor man's enum for an xml formatter. */
-    private static final String E_XML = "xml";
-    /** Poor man's enum for a plain formatter. */
-    private static final String E_PLAIN = "plain";
-    /** Poor man's enum for a sarif formatter. */
-    private static final String E_SARIF = "sarif";
 
     /** Suffix for time string. */
     private static final String TIME_SUFFIX = " ms.";
@@ -93,20 +87,12 @@ public class CheckstyleAntTask extends Task {
     /** Config file containing configuration. */
     private String config;
 
-    /** Whether to fail build on violations. */
-    private boolean failOnViolation = true;
-
-    /** Property to set on violations. */
-    private String failureProperty;
+    /** Decides when the build fails because of violations. */
+    // Code Smell Refactor
+    private final FailurePolicy failurePolicy = new FailurePolicy();
 
     /** The name of the properties file. */
     private Path properties;
-
-    /** The maximum number of errors that are tolerated. */
-    private int maxErrors;
-
-    /** The maximum number of warnings that are tolerated. */
-    private int maxWarnings = Integer.MAX_VALUE;
 
     /**
      * Whether to execute ignored modules - some modules may log above
@@ -134,7 +120,7 @@ public class CheckstyleAntTask extends Task {
      *                      in the event of a failure.
      */
     public void setFailureProperty(String propertyName) {
-        failureProperty = propertyName;
+        failurePolicy.setFailureProperty(propertyName);
     }
 
     /**
@@ -143,7 +129,7 @@ public class CheckstyleAntTask extends Task {
      * @param fail whether to fail if a violation is found
      */
     public void setFailOnViolation(boolean fail) {
-        failOnViolation = fail;
+        failurePolicy.setFailOnViolation(fail);
     }
 
     /**
@@ -152,7 +138,7 @@ public class CheckstyleAntTask extends Task {
      * @param maxErrors the maximum number of errors allowed.
      */
     public void setMaxErrors(int maxErrors) {
-        this.maxErrors = maxErrors;
+        failurePolicy.setMaxErrors(maxErrors);
     }
 
     /**
@@ -162,7 +148,7 @@ public class CheckstyleAntTask extends Task {
      * @param maxWarnings the maximum number of warnings allowed.
      */
     public void setMaxWarnings(int maxWarnings) {
-        this.maxWarnings = maxWarnings;
+        failurePolicy.setMaxWarnings(maxWarnings);
     }
 
     /**
@@ -354,22 +340,7 @@ public class CheckstyleAntTask extends Task {
         catch (CheckstyleException exc) {
             throw new BuildException("Unable to process files: " + files, exc);
         }
-        final int numWarnings = warningCounter.getCount();
-        final boolean okStatus = numErrs <= maxErrors && numWarnings <= maxWarnings;
-
-        // Handle the return status
-        if (!okStatus) {
-            final String failureMsg =
-                    "Got " + numErrs + " errors (max allowed: " + maxErrors + ") and "
-                            + numWarnings + " warnings.";
-            if (failureProperty != null) {
-                getProject().setProperty(failureProperty, failureMsg);
-            }
-
-            if (failOnViolation) {
-                throw new BuildException(failureMsg, getLocation());
-            }
-        }
+                failurePolicy.check(getProject(), getLocation(), numErrs, warningCounter.getCount());
     }
 
     /**
@@ -602,6 +573,13 @@ public class CheckstyleAntTask extends Task {
      */
     public static class FormatterType extends EnumeratedAttribute {
 
+         // Code Smell Refactor
+        private static final String E_XML = "xml";
+        /** Poor man's enum for a plain formatter. */
+        private static final String E_PLAIN = "plain";
+        /** Poor man's enum for a sarif formatter. */
+        private static final String E_SARIF = "sarif";
+
         /** My possible values. */
         private static final String[] VALUES = {E_XML, E_PLAIN, E_SARIF};
 
@@ -675,11 +653,11 @@ public class CheckstyleAntTask extends Task {
         public AuditListener createListener(Task task) throws IOException {
             final AuditListener listener;
             if (type != null
-                    && E_XML.equals(type.getValue())) {
+                   && FormatterType.E_XML.equals(type.getValue())) {
                 listener = createXmlLogger(task);
             }
             else if (type != null
-                    && E_SARIF.equals(type.getValue())) {
+                    && FormatterType.E_SARIF.equals(type.getValue())) {
                 listener = createSarifLogger(task);
             }
             else {
