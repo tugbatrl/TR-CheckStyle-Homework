@@ -47,6 +47,9 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import com.puppycrawl.tools.checkstyle.site.SearchIndexEntry.EntryClassification;
+import com.puppycrawl.tools.checkstyle.site.SearchIndexEntry.EntryContent;
+import com.puppycrawl.tools.checkstyle.site.SearchIndexEntry.EntryLocation;
 /**
  * Generates {@code search-index.json} from the Checkstyle XDoc source files.
  *
@@ -573,9 +576,11 @@ public final class SearchIndexGenerator {
         final String keywords = extractAggregateKeywords(title, sections);
         final String since = extractSince(body);
         final int weight = getWeightForType(type);
-
-        return new SearchIndexEntry(title, baseUrl, category, type,
-                description, keywords, since, weight);
+        //Code Smell Refactor
+          return new SearchIndexEntry(
+                new EntryLocation(title, baseUrl),
+                new EntryClassification(category, type, weight),
+                new EntryContent(description, keywords, since));
     }
 
     /**
@@ -610,9 +615,11 @@ public final class SearchIndexGenerator {
             final String description = extractFirstSentenceOrTruncated(fullText);
             final String keywords = extractKeywordsFromText(
                     pageTitle + SPACE + fullText);
+            //Code smell refactor
             results.add(new SearchIndexEntry(
-                    pageTitle, pageUrl, GENERAL, GENERAL, description, keywords,
-                    "", generalWeight));
+                    new EntryLocation(pageTitle, pageUrl),
+                    new EntryClassification(GENERAL, GENERAL, generalWeight),
+                    new EntryContent(description, keywords, "")));
         }
         else {
             for (int index = 0; index < sections.getLength(); index++) {
@@ -631,9 +638,11 @@ public final class SearchIndexGenerator {
                         final String keywords = extractKeywordsFromText(
                                 pageTitle + SPACE + sectionName + SPACE + sectionText);
 
+                        // Code Smell Refactor
                         results.add(new SearchIndexEntry(
-                                entryTitle, url, GENERAL, GENERAL, description,
-                                keywords, "", generalWeight));
+                                new EntryLocation(entryTitle, url),
+                                new EntryClassification(GENERAL, GENERAL, generalWeight),
+                                new EntryContent(description, keywords, "")));
                     }
                 }
             }
@@ -736,9 +745,12 @@ public final class SearchIndexGenerator {
                     checkName + SPACE + exampleLabel
                             + SPACE + exampleType + SPACE + introText);
 
+            // Code Smell Refactor
             result = new SearchIndexEntry(
-                    title, url, category, EXAMPLE_TYPE,
-                    description, keywords, "", getWeightForType(EXAMPLE_TYPE));
+                    new EntryLocation(title, url),
+                    new EntryClassification(category, EXAMPLE_TYPE,
+                            getWeightForType(EXAMPLE_TYPE)),
+                    new EntryContent(description, keywords, ""));
         }
 
         return result;
@@ -844,9 +856,11 @@ public final class SearchIndexGenerator {
             }
             final int weight = getWeightForType(PROPERTY_TYPE);
 
+             // Code Smell Refactor
             propertyEntries.add(new SearchIndexEntry(
-                    title, url, category, PROPERTY_TYPE,
-                    description, keywords, since, weight));
+                    new EntryLocation(title, url),
+                    new EntryClassification(category, PROPERTY_TYPE, weight),
+                    new EntryContent(description, keywords, since)));
         }
     }
 
@@ -860,7 +874,7 @@ public final class SearchIndexGenerator {
      * @param entry the entry to conditionally add
      */
     private void addIfNew(SearchIndexEntry entry) {
-        if (seenUrls.add(entry.url())) {
+               if (seenUrls.add(entry.location().url())) {   // Code Smell Refactor {
             entries.add(entry);
         }
     }
